@@ -19,6 +19,7 @@ use std::{borrow::Cow, collections::HashSet, num::NonZeroU16, sync::atomic::Orde
 use self::serenity::builder::*;
 use num_format::{Locale, ToFormattedString};
 use poise::{futures_util::TryStreamExt, serenity_prelude as serenity, CreateReply};
+use typesize::TypeSize;
 
 use crate::{
     funcs::dm_generic,
@@ -329,25 +330,45 @@ pub async fn leave(ctx: Context<'_>) -> CommandResult {
 
 #[poise::command(prefix_command, owners_only)]
 pub async fn cache_info(ctx: Context<'_>) -> CommandResult {
-    let mut embed = CreateEmbed::default().title("Cache Statistics");
-    for cache in ctx.cache().get_statistics() {
-        let size = (cache.size / 1000).to_formatted_string(&Locale::en);
-        let (count, size_per) = if cache.count == 0 {
-            (Cow::Borrowed("0"), Cow::Borrowed("N/A"))
-        } else {
-            let count = cache.count.to_formatted_string(&Locale::en);
-            let mut size_per = (cache.size / cache.count).to_formatted_string(&Locale::en);
-            size_per.push('b');
-
-            (Cow::Owned(count), Cow::Owned(size_per))
-        };
-
-        embed = embed.field(
-            cache.name,
-            format!("Size: `{size}kb`\nCount: `{count}`\nSize per model: `{size_per}`"),
-            false,
-        );
+    struct Field {
+        name: String,
+        value: String,
+        is_collection: bool,
     }
+
+    let mut fields = Vec::new();
+    for cache in ctx.cache().get_size_details() {
+        let size = (cache.size / 1000).to_formatted_string(&Locale::en);
+        if let Some(count) = cache.collection_items {
+            let (count, size_per) = if count == 0 {
+                (Cow::Borrowed("0"), Cow::Borrowed("N/A"))
+            } else {
+                let count_fmt = count.to_formatted_string(&Locale::en);
+                let mut size_per = (cache.size / count).to_formatted_string(&Locale::en);
+                size_per.push('b');
+
+                (Cow::Owned(count_fmt), Cow::Owned(size_per))
+            };
+
+            fields.push(Field {
+                name: String::from(cache.name),
+                value: format!("Size: `{size}kb`\nCount: `{count}`\nSize per model: `{size_per}`"),
+                is_collection: true,
+            });
+        } else {
+            fields.push(Field {
+                name: String::from(cache.name),
+                value: format!("Size: `{size}kb`"),
+                is_collection: false,
+            });
+        };
+    }
+
+    fields.sort_by_key(|field| !field.is_collection);
+
+    let embed = CreateEmbed::default()
+        .title("Cache Statistics")
+        .fields(fields.into_iter().map(|f| (f.name, f.value, true)));
 
     ctx.send(CreateReply::default().embed(embed)).await?;
     Ok(())
