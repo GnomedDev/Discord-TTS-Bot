@@ -27,8 +27,8 @@ use crate::{
     opt_ext::{OptionGettext, OptionTryUnwrap},
     require,
     structs::{
-        Context, GoogleGender, GoogleVoice, LastToXsaidTracker, RegexCache, Result, TTSMode,
-        TTSServiceError,
+        Context, GoogleGender, GoogleVoice, LastToXsaidTracker, RegexCache, Result,
+        SerenityContext, TTSMode, TTSServiceError,
     },
 };
 
@@ -37,7 +37,7 @@ pub async fn decode_resp<T: serde::de::DeserializeOwned>(resp: reqwest::Response
 }
 
 pub async fn dm_generic(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     author: &serenity::User,
     target: serenity::UserId,
     mut target_tag: String,
@@ -257,7 +257,7 @@ fn remove_repeated_chars(content: &str, limit: usize) -> String {
 }
 
 pub async fn run_checks(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     message: &serenity::Message,
     guild_row: &GuildRow,
 ) -> Result<Option<(String, Option<serenity::ChannelId>)>> {
@@ -558,7 +558,7 @@ pub fn confirm_dialog_components(positive: String, negative: String) -> Vec<Crea
 }
 
 pub async fn confirm_dialog_wait(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     message: &serenity::Message,
     author_id: serenity::UserId,
 ) -> Result<Option<bool>> {

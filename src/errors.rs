@@ -12,7 +12,7 @@ use self::serenity::{
 };
 use crate::{
     constants, require,
-    structs::{Data, FrameworkContext},
+    structs::{Data, FrameworkContext, SerenityContext},
     traits::PoiseContextExt,
     Context, OptionTryUnwrap,
 };
@@ -47,7 +47,7 @@ fn hash(data: &[u8]) -> Vec<u8> {
 }
 
 pub async fn handle_unexpected<'a>(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     poise_context: FrameworkContext<'_>,
     event: &'a str,
     error: Error,
@@ -55,7 +55,7 @@ pub async fn handle_unexpected<'a>(
     author_name: Option<String>,
     icon_url: Option<String>,
 ) -> Result<()> {
-    let data = poise_context.user_data;
+    let data = &ctx.data;
     let error_webhook = &data.error_webhook;
 
     let traceback = format!("{error:?}");
@@ -195,7 +195,7 @@ pub async fn handle_unexpected<'a>(
 }
 
 pub async fn handle_unexpected_default(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     framework: FrameworkContext<'_>,
     name: &str,
     result: Result<()>,
@@ -207,7 +207,7 @@ pub async fn handle_unexpected_default(
 
 // Listener Handlers
 pub async fn handle_message(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     poise_context: FrameworkContext<'_>,
     message: &serenity::Message,
     result: Result<impl Send + Sync>,
@@ -241,7 +241,7 @@ pub async fn handle_message(
 }
 
 pub async fn handle_member(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     framework: FrameworkContext<'_>,
     member: &serenity::Member,
     result: Result<(), impl Into<Error>>,
@@ -268,7 +268,7 @@ pub async fn handle_member(
 
 pub async fn handle_guild(
     name: &str,
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     framework: FrameworkContext<'_>,
     guild: Option<&serenity::Guild>,
     result: Result<()>,
@@ -529,13 +529,12 @@ pub async fn handle(error: poise::FrameworkError<'_, Data, Error>) -> Result<()>
 }
 
 pub async fn interaction_create(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     interaction: &serenity::Interaction,
-    framework: FrameworkContext<'_>,
 ) -> Result<(), Error> {
     if let serenity::Interaction::Component(interaction) = interaction {
         if interaction.data.custom_id == VIEW_TRACEBACK_CUSTOM_ID {
-            handle_traceback_button(ctx, framework.user_data, interaction).await?;
+            handle_traceback_button(ctx, interaction).await?;
         };
     };
 
@@ -543,14 +542,13 @@ pub async fn interaction_create(
 }
 
 pub async fn handle_traceback_button(
-    ctx: &serenity::Context,
-    data: &Data,
+    ctx: &SerenityContext,
     interaction: &serenity::ComponentInteraction,
 ) -> Result<(), Error> {
     let row: Option<TracebackRow> =
         sqlx::query_as("SELECT traceback FROM errors WHERE message_id = $1")
             .bind(interaction.message.id.get() as i64)
-            .fetch_optional(&data.pool)
+            .fetch_optional(&ctx.data.pool)
             .await?;
 
     let mut response_data = serenity::CreateInteractionResponseMessage::default().ephemeral(true);
@@ -570,8 +568,7 @@ pub async fn handle_traceback_button(
 }
 
 struct TrackErrorHandler<Iter: IntoIterator<Item = (&'static str, Cow<'static, str>, bool)>> {
-    ctx: serenity::Context,
-    data: Data,
+    ctx: SerenityContext,
     shard_manager: Arc<serenity::ShardManager>,
     extra_fields: Iter,
     author_name: String,
@@ -589,7 +586,6 @@ where
                 // HACK: Cannot get reference to options from here, so has to be faked.
                 // This is fine because the options are not used in the error handler.
                 let framework_context = FrameworkContext {
-                    user_data: &self.data,
                     shard_manager: &self.shard_manager,
                     bot_id: self.ctx.cache.current_user().id,
                     options: &poise::FrameworkOptions::default(),
@@ -622,9 +618,8 @@ where
 /// Registers a track to be handled by the error handler, arguments other than the
 /// track are passed to [`handle_unexpected`] if the track errors.
 pub fn handle_track<Iter>(
-    ctx: serenity::Context,
+    ctx: SerenityContext,
     shard_manager: Arc<serenity::ShardManager>,
-    data: Data,
     extra_fields: Iter,
     author_name: String,
     icon_url: String,
@@ -642,7 +637,6 @@ where
         songbird::Event::Track(songbird::TrackEvent::Error),
         TrackErrorHandler {
             ctx,
-            data,
             shard_manager,
             extra_fields,
             author_name,

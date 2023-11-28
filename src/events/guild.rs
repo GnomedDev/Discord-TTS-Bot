@@ -4,11 +4,10 @@ use tracing::info;
 
 use serenity::builder::*;
 
-use crate::{serenity, Data, Result};
+use crate::{serenity, structs::SerenityContext, Result};
 
 pub async fn guild_create(
-    ctx: &serenity::Context,
-    data: &Data,
+    ctx: &SerenityContext,
     guild: &serenity::Guild,
     is_new: Option<bool>,
 ) -> Result<()> {
@@ -37,7 +36,7 @@ Then, you can just type normal messages and I will say them, like magic!
 You can view all the commands with `/help`
 Ask questions by either responding here or asking on the support server!",
         guild.name))
-        .footer(CreateEmbedFooter::new(format!("Support Server: {} | Bot Invite: https://bit.ly/TTSBotSlash", data.config.main_server_invite)))
+        .footer(CreateEmbedFooter::new(format!("Support Server: {} | Bot Invite: https://bit.ly/TTSBotSlash", ctx.data.config.main_server_invite)))
         .author(CreateEmbedAuthor::new(owner_tag.clone()).icon_url(owner_face))
     )).await {
         Err(serenity::Error::Http(error)) if error.status_code() == Some(serenity::StatusCode::FORBIDDEN) => {},
@@ -48,9 +47,9 @@ Ask questions by either responding here or asking on the support server!",
     match ctx
         .http
         .add_member_role(
-            data.config.main_server,
+            ctx.data.config.main_server,
             guild.owner_id,
-            data.config.ofs_role,
+            ctx.data.config.ofs_role,
             None,
         )
         .await
@@ -70,32 +69,32 @@ Ask questions by either responding here or asking on the support server!",
 }
 
 pub async fn guild_delete(
-    ctx: &serenity::Context,
-    data: &Data,
+    ctx: &SerenityContext,
     incomplete: &serenity::UnavailableGuild,
     full: Option<&serenity::Guild>,
 ) -> Result<()> {
-    data.guilds_db.delete(incomplete.id.into()).await?;
+    ctx.data.guilds_db.delete(incomplete.id.into()).await?;
 
     let Some(guild) = full else { return Ok(()) };
-    if data.currently_purging.load(Ordering::SeqCst) {
+    if ctx.data.currently_purging.load(Ordering::SeqCst) {
         return Ok(());
     }
 
-    if data
+    if ctx
+        .data
         .config
         .main_server
         .members(&ctx.http, None, None)
         .await?
         .into_iter()
-        .filter(|m| m.roles.contains(&data.config.ofs_role))
+        .filter(|m| m.roles.contains(&ctx.data.config.ofs_role))
         .any(|m| m.user.id == guild.owner_id)
     {
         ctx.http
             .remove_member_role(
-                data.config.main_server,
+                ctx.data.config.main_server,
                 guild.owner_id,
-                data.config.ofs_role,
+                ctx.data.config.ofs_role,
                 None,
             )
             .await?;

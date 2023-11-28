@@ -348,15 +348,14 @@ async fn voice_autocomplete(
     ctx: ApplicationContext<'_>,
     searching: &str,
 ) -> Vec<serenity::AutocompleteChoice> {
-    let Ok((_, mode)) = ctx
-        .data
+    let data = &ctx.serenity_context.data;
+    let Ok((_, mode)) = data
         .parse_user_or_guild(ctx.interaction.user.id, ctx.interaction.guild_id)
         .await
     else {
         return Vec::new();
     };
 
-    let data = ctx.data;
     let (mut i1, mut i2, mut i3, mut i4);
     let voices: &mut dyn Iterator<Item = _> = match mode {
         TTSMode::gTTS => {
@@ -415,6 +414,7 @@ async fn translation_languages_autocomplete(
     searching: &str,
 ) -> impl Iterator<Item = serenity::AutocompleteChoice> {
     let mut filtered_languages = ctx
+        .serenity_context
         .data
         .translation_languages
         .iter()

@@ -11,7 +11,7 @@ use crate::{
     bot_list_updater::BotListUpdater,
     constants::FREE_NEUTRAL_COLOUR,
     looper::Looper,
-    structs::{FrameworkContext, Result},
+    structs::{FrameworkContext, Result, SerenityContext},
     web_updater,
 };
 
@@ -40,22 +40,21 @@ fn generate_status(shards: &HashMap<serenity::ShardId, serenity::ShardRunnerInfo
 }
 
 pub async fn ready(
-    framework_ctx: FrameworkContext<'_>,
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
+    fw_ctx: FrameworkContext<'_>,
     data_about_bot: &serenity::Ready,
 ) -> Result<()> {
-    let data = framework_ctx.user_data;
-
     let shard_count = ctx.cache.shard_count();
     let user_name = &data_about_bot.user.name;
     let last_shard = (ctx.shard_id.0 + 1) == shard_count;
-    let status = generate_status(&*framework_ctx.shard_manager.runners.lock().await);
+    let status = generate_status(&*fw_ctx.shard_manager.runners.lock().await);
 
-    data.webhooks
+    ctx.data
+        .webhooks
         .logs
         .edit_message(
             &ctx.http,
-            data.startup_message,
+            ctx.data.startup_message,
             serenity::EditWebhookMessage::default().content("").embed(
                 CreateEmbed::default()
                     .description(status)
@@ -63,7 +62,7 @@ pub async fn ready(
                     .title(if last_shard {
                         format!(
                             "{user_name} started in {} seconds",
-                            data.start_time.elapsed().unwrap().as_secs()
+                            ctx.data.start_time.elapsed().unwrap().as_secs()
                         )
                     } else {
                         format!("{user_name} is starting up {shard_count} shards!")
@@ -72,20 +71,20 @@ pub async fn ready(
         )
         .await?;
 
-    if last_shard && !data.fully_started.load(Ordering::SeqCst) {
-        data.fully_started.store(true, Ordering::SeqCst);
+    if last_shard && !ctx.data.fully_started.load(Ordering::SeqCst) {
+        ctx.data.fully_started.store(true, Ordering::SeqCst);
         let stats_updater = Arc::new(BotListUpdater::new(
-            data.reqwest.clone(),
+            ctx.data.reqwest.clone(),
             ctx.cache.clone(),
-            data.bot_list_tokens.clone(),
+            ctx.data.bot_list_tokens.clone(),
         ));
 
-        if let Some(website_info) = data.website_info.write().take() {
+        if let Some(website_info) = ctx.data.website_info.write().take() {
             let web_updater = Arc::new(web_updater::Updater {
-                patreon_service: data.config.patreon_service.clone(),
-                reqwest: data.reqwest.clone(),
+                patreon_service: ctx.data.config.patreon_service.clone(),
+                reqwest: ctx.data.reqwest.clone(),
                 cache: ctx.cache.clone(),
-                pool: data.pool.clone(),
+                pool: ctx.data.pool.clone(),
                 config: website_info,
             });
 

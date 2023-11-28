@@ -17,41 +17,40 @@ use ready::*;
 use voice_state::*;
 
 use poise::serenity_prelude as serenity;
-use serenity::FullEvent as Event;
 
-use crate::structs::{FrameworkContext, Result};
+use crate::structs::{FrameworkContext, Result, SerenityContext};
 
 pub async fn listen(
-    ctx: &serenity::Context,
-    event: &Event,
-    framework_ctx: FrameworkContext<'_>,
+    ctx: &SerenityContext,
+    event: &serenity::FullEvent,
+    fw_ctx: FrameworkContext<'_>,
 ) -> Result<()> {
-    let data = framework_ctx.user_data;
-
     match event {
-        Event::Message { new_message } => message(framework_ctx, ctx, new_message).await,
-        Event::GuildCreate { guild, is_new } => guild_create(ctx, data, guild, *is_new).await,
-        Event::Ready { data_about_bot } => ready(framework_ctx, ctx, data_about_bot).await,
-        Event::GuildDelete { incomplete, full } => {
-            guild_delete(ctx, data, incomplete, full.as_ref()).await
+        serenity::FullEvent::Message { new_message } => message(ctx, new_message, fw_ctx).await,
+        serenity::FullEvent::GuildCreate { guild, is_new } => {
+            guild_create(ctx, guild, *is_new).await
         }
-        Event::GuildMemberAddition { new_member } => {
-            guild_member_addition(ctx, data, new_member).await
+        serenity::FullEvent::Ready { data_about_bot } => ready(ctx, fw_ctx, data_about_bot).await,
+        serenity::FullEvent::GuildDelete { incomplete, full } => {
+            guild_delete(ctx, incomplete, full.as_ref()).await
         }
-        Event::GuildMemberRemoval {
-            guild_id,
-            user,
-            member_data_if_available: _,
-        } => guild_member_removal(ctx, data, *guild_id, user).await,
-        Event::VoiceStateUpdate { old, new } => {
-            voice_state_update(ctx, data, old.as_ref(), new).await
+        serenity::FullEvent::GuildMemberAddition { new_member } => {
+            guild_member_addition(ctx, new_member).await
         }
-        Event::ChannelDelete { channel, .. } => channel_delete(data, channel).await,
-        Event::InteractionCreate { interaction } => {
-            interaction_create(framework_ctx, ctx, interaction).await
+        serenity::FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
+            guild_member_removal(ctx, *guild_id, user).await
         }
-        Event::Resume { .. } => {
-            resume(data);
+        serenity::FullEvent::VoiceStateUpdate { old, new } => {
+            voice_state_update(ctx, old.as_ref(), new).await
+        }
+        serenity::FullEvent::ChannelDelete { channel, .. } => {
+            channel_delete(&ctx.data, channel).await
+        }
+        serenity::FullEvent::InteractionCreate { interaction } => {
+            interaction_create(ctx, interaction).await
+        }
+        serenity::FullEvent::Resume { .. } => {
+            resume(&ctx.data);
             Ok(())
         }
         _ => Ok(()),

@@ -4,7 +4,7 @@ use poise::serenity_prelude as serenity;
 
 use crate::{
     errors,
-    structs::{Data, FrameworkContext, Result},
+    structs::{Data, Result, SerenityContext},
 };
 
 pub fn resume(data: &Data) {
@@ -12,9 +12,8 @@ pub fn resume(data: &Data) {
 }
 
 pub async fn interaction_create(
-    framework_ctx: FrameworkContext<'_>,
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     interaction: &serenity::Interaction,
 ) -> Result<()> {
-    errors::interaction_create(ctx, interaction, framework_ctx).await
+    errors::interaction_create(ctx, interaction).await
 }

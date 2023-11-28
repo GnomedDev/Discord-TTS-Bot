@@ -2,13 +2,12 @@ use poise::serenity_prelude as serenity;
 
 use crate::{
     opt_ext::OptionTryUnwrap,
-    structs::{Data, Result},
+    structs::{Result, SerenityContext},
 };
 
 /// If (on leave) the bot should also leave as it is alone
 pub async fn voice_state_update(
-    ctx: &serenity::Context,
-    data: &Data,
+    ctx: &SerenityContext,
     old: Option<&serenity::VoiceState>,
     new: &serenity::VoiceState,
 ) -> Result<()> {
@@ -17,7 +16,7 @@ pub async fn voice_state_update(
 
     // Bot is in vc on server
     let guild_id = new.guild_id.try_unwrap()?;
-    if data.songbird.get(guild_id).is_none() {
+    if ctx.data.songbird.get(guild_id).is_none() {
         return Ok(());
     }
 
@@ -43,5 +42,5 @@ pub async fn voice_state_update(
         return Ok(());
     };
 
-    data.songbird.remove(guild_id).await.map_err(Into::into)
+    ctx.data.songbird.remove(guild_id).await.map_err(Into::into)
 }

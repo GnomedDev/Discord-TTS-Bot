@@ -342,7 +342,7 @@ async fn _main(start_time: std::time::SystemTime) -> Result<()> {
 
     let framework_options = poise::FrameworkOptions {
         commands: commands::commands(),
-        event_handler: |ctx, event, fw_ctx, _| Box::pin(events::listen(ctx, event, fw_ctx)),
+        event_handler: |ctx, event, fw_ctx| Box::pin(events::listen(ctx, event, fw_ctx)),
         on_error: |error| {
             Box::pin(async move {
                 let res = errors::handle(error).await;
@@ -377,7 +377,8 @@ async fn _main(start_time: std::time::SystemTime) -> Result<()> {
                 Box::pin(async move {
                     Ok(Some(match ctx.guild_id {
                         Some(guild_id) => {
-                            let row = ctx.data.guilds_db.get(guild_id.into()).await?;
+                            let guilds_db = &ctx.serenity_context.data.guilds_db;
+                            let row = guilds_db.get(guild_id.into()).await?;
                             String::from(row.prefix.as_str())
                         }
                         None => String::from("-"),
@@ -430,11 +431,13 @@ async fn _main(start_time: std::time::SystemTime) -> Result<()> {
         ..poise::FrameworkOptions::default()
     };
 
-    let mut client = serenity::Client::builder(token, intents)
+    let framework = poise::Framework::builder()
+        .options(framework_options)
+        .build();
+
+    let mut client = serenity::Client::builder(token, intents, data)
+        .framework(framework)
         .voice_manager_arc(songbird)
-        .framework(poise::Framework::new(framework_options, |_, _, _| {
-            Box::pin(async { Ok(data) })
-        }))
         .await?;
 
     let shard_manager = client.shard_manager.clone();

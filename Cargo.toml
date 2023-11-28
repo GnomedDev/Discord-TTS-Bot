@@ -62,10 +62,17 @@ package = "serenity"
 version = "0.12.0"
 
 [dependencies.poise]
-git = "https://github.com/serenity-rs/poise"
+git = "https://github.com/gnomeddev/poise"
 features = ["cache"]
-branch = "current"
+branch = "serenity-data"
 
 [dependencies.songbird]
-version = "0.4"
+git = "https://github.com/GnomedDev/songbird"
 features = ["builtin-queue"]
+branch = "serenity-data"
+
+[patch.crates-io]
+serenity = { git = "https://github.com/GnomedDev/serenity", branch = "typemap-be-gone" }
+
+[patch."https://github.com/serenity-rs/serenity"]
+serenity = { git = "https://github.com/GnomedDev/serenity", branch = "typemap-be-gone" }

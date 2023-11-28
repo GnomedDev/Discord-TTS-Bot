@@ -496,6 +496,7 @@ impl std::fmt::Display for TTSServiceError {
     }
 }
 
+pub type SerenityContext = serenity::Context<Data>;
 pub type Command = poise::Command<Data, CommandError>;
 pub type Context<'a> = poise::Context<'a, Data, CommandError>;
 pub type PrefixContext<'a> = poise::PrefixContext<'a, Data, CommandError>;

@@ -11,31 +11,30 @@ use crate::{
     funcs::{self, clean_msg, dm_generic, random_footer, run_checks},
     opt_ext::OptionTryUnwrap,
     require,
-    structs::{Data, FrameworkContext, JoinVCToken, Result, TTSMode},
+    structs::{Data, FrameworkContext, JoinVCToken, Result, SerenityContext, TTSMode},
     traits::SongbirdManagerExt,
 };
 
 pub async fn message(
-    framework_ctx: FrameworkContext<'_>,
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     new_message: &serenity::Message,
+    framework_ctx: FrameworkContext<'_>,
 ) -> Result<()> {
     tokio::try_join!(
         process_tts_msg(ctx, new_message, &framework_ctx),
-        process_support_dm(ctx, new_message, framework_ctx.user_data),
-        process_mention_msg(ctx, new_message, framework_ctx.user_data),
+        process_support_dm(ctx, new_message),
+        process_mention_msg(ctx, new_message),
     )?;
 
     Ok(())
 }
 
 async fn process_tts_msg(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     message: &serenity::Message,
     framework_ctx: &FrameworkContext<'_>,
 ) -> Result<()> {
-    let data = framework_ctx.user_data;
-
+    let data = &ctx.data;
     let guild_id = require!(message.guild_id, Ok(()));
     let guild_row = data.guilds_db.get(guild_id.into()).await?;
 
@@ -208,12 +207,10 @@ async fn process_tts_msg(
     let shard_manager = framework_ctx.shard_manager.clone();
     let author_name = message.author.name.clone();
     let icon_url = message.author.face();
-    let data = data.clone();
 
     errors::handle_track(
         ctx.clone(),
         shard_manager,
-        data,
         extra_fields,
         author_name,
         icon_url,
@@ -222,11 +219,7 @@ async fn process_tts_msg(
     .map_err(Into::into)
 }
 
-async fn process_mention_msg(
-    ctx: &serenity::Context,
-    message: &serenity::Message,
-    data: &Data,
-) -> Result<()> {
+async fn process_mention_msg(ctx: &SerenityContext, message: &serenity::Message) -> Result<()> {
     let bot_user = ctx.cache.current_user().id;
     if ![format!("<@{bot_user}>"), format!("<@!{bot_user}>")].contains(&message.content) {
         return Ok(());
@@ -236,7 +229,7 @@ async fn process_mention_msg(
     let channel = message.channel(ctx).await?.guild().unwrap();
     let permissions = channel.permissions_for_user(ctx, bot_user)?;
 
-    let guild_row = data.guilds_db.get(guild_id.into()).await?;
+    let guild_row = ctx.data.guilds_db.get(guild_id.into()).await?;
     let prefix = guild_row.prefix.as_str().replace(['`', '\\'], "");
 
     if permissions.send_messages() {
@@ -266,11 +259,8 @@ async fn process_mention_msg(
     Ok(())
 }
 
-async fn process_support_dm(
-    ctx: &serenity::Context,
-    message: &serenity::Message,
-    data: &Data,
-) -> Result<()> {
+async fn process_support_dm(ctx: &SerenityContext, message: &serenity::Message) -> Result<()> {
+    let data = &ctx.data;
     let channel = match message.channel(ctx).await? {
         serenity::Channel::Guild(channel) => {
             return process_support_response(ctx, message, data, channel).await
@@ -370,7 +360,7 @@ async fn process_support_dm(
 }
 
 async fn process_support_response(
-    ctx: &serenity::Context,
+    ctx: &SerenityContext,
     message: &serenity::Message,
     data: &Data,
     channel: serenity::GuildChannel,

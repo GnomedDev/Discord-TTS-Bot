@@ -4,6 +4,7 @@ use reqwest::StatusCode;
 use crate::{
     constants::PREMIUM_NEUTRAL_COLOUR,
     funcs::{confirm_dialog_components, confirm_dialog_wait},
+    structs::SerenityContext,
     Data, Result,
 };
 
@@ -15,9 +16,12 @@ fn is_guild_owner(cache: &serenity::Cache, user_id: serenity::UserId) -> bool {
         .unwrap_or(false)
 }
 
-async fn add_ofs_role(data: &Data, http: &serenity::Http, user_id: serenity::UserId) -> Result<()> {
-    match http
-        .add_member_role(data.config.main_server, user_id, data.config.ofs_role, None)
+async fn add_ofs_role(ctx: &SerenityContext, user_id: serenity::UserId) -> Result<()> {
+    let config = &ctx.data.config;
+
+    match ctx
+        .http
+        .add_member_role(config.main_server, user_id, config.ofs_role, None)
         .await
     {
         // Unknown member
@@ -31,13 +35,10 @@ async fn add_ofs_role(data: &Data, http: &serenity::Http, user_id: serenity::Use
     }
 }
 
-pub async fn guild_member_addition(
-    ctx: &serenity::Context,
-    data: &Data,
-    member: &serenity::Member,
-) -> Result<()> {
-    if member.guild_id == data.config.main_server && is_guild_owner(&ctx.cache, member.user.id) {
-        add_ofs_role(data, &ctx.http, member.user.id).await?;
+pub async fn guild_member_addition(ctx: &SerenityContext, member: &serenity::Member) -> Result<()> {
+    if member.guild_id == ctx.data.config.main_server && is_guild_owner(&ctx.cache, member.user.id)
+    {
+        add_ofs_role(ctx, member.user.id).await?;
     }
 
     Ok(())
@@ -69,11 +70,11 @@ Do you want to remove that server from your assigned slots?",
 }
 
 pub async fn guild_member_removal(
-    ctx: &serenity::Context,
-    data: &Data,
+    ctx: &SerenityContext,
     guild_id: serenity::GuildId,
     user: &serenity::User,
 ) -> Result<()> {
+    let data = &ctx.data;
     let guild_row = data.guilds_db.get(guild_id.into()).await?;
     let Some(premium_user) = guild_row.premium_user else {
         return Ok(());

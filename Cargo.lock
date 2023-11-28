@@ -1586,7 +1586,7 @@ dependencies = [
 [[package]]
 name = "poise"
 version = "0.5.7"
-source = "git+https://github.com/serenity-rs/poise?branch=current#835a016f0e511c9b5d74f5c32b9ae151001347cd"
+source = "git+https://github.com/gnomeddev/poise?branch=serenity-data#241b24b9ed3ee0e8902f7c2af9b8df32d630efa5"
 dependencies = [
  "async-trait",
  "derivative",
@@ -1602,7 +1602,7 @@ dependencies = [
 [[package]]
 name = "poise_macros"
 version = "0.5.7"
-source = "git+https://github.com/serenity-rs/poise?branch=current#835a016f0e511c9b5d74f5c32b9ae151001347cd"
+source = "git+https://github.com/gnomeddev/poise?branch=serenity-data#241b24b9ed3ee0e8902f7c2af9b8df32d630efa5"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2168,8 +2168,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "385647faa24a889929028973650a4f158fb1b4272b2fcf94feb9fcc3c009e813"
+source = "git+https://github.com/GnomedDev/serenity?branch=typemap-be-gone#994ca84dde9df2148b3fa01ca8a731ead58d0bab"
 dependencies = [
  "arrayvec",
  "async-trait",
@@ -2178,6 +2177,7 @@ dependencies = [
  "bytes",
  "chrono",
  "dashmap",
+ "derivative",
  "flate2",
  "futures",
  "fxhash",
@@ -2192,7 +2192,6 @@ dependencies = [
  "tokio",
  "tokio-tungstenite 0.20.1",
  "tracing",
- "typemap_rev",
  "typesize",
  "url",
 ]
@@ -2303,8 +2302,7 @@ dependencies = [
 [[package]]
 name = "songbird"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b905d2cdd4becf0e643a4aa5491cdfe8f193d5676b5bae7c0460e0e3c6358d63"
+source = "git+https://github.com/GnomedDev/songbird?branch=serenity-data#fd548957a6e4c42cdf28ba091a73143184f65a3f"
 dependencies = [
  "async-trait",
  "audiopus",
@@ -3382,9 +3380,9 @@ dependencies = [
 
 [[package]]
 name = "web-sys"
-version = "0.3.65"
+version = "0.3.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5db499c5f66323272151db0e666cd34f78617522fb0c1604d31a27c50c206a85"
+checksum = "50c24a44ec86bb68fbecd1b3efed7e85ea5621b39b35ef2766b66cd984f8010f"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
