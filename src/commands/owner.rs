@@ -111,6 +111,7 @@ pub async fn add_premium(
     prefix_command,
     owners_only,
     hide_in_help,
+    aliases("invalidate_cache", "delete_cache"),
     subcommands("guild", "user", "guild_voice", "user_voice")
 )]
 pub async fn remove_cache(ctx: Context<'_>) -> CommandResult {
