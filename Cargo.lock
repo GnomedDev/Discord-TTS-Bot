@@ -190,6 +190,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bool_to_bitflags"
+version = "0.1.0"
+source = "git+https://github.com/GnomedDev/bool-to-bitflags#b98fb63f95ead1e4bee526a79675ceeb3300c97c"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.43",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -538,9 +549,9 @@ dependencies = [
  "anyhow",
  "arrayvec",
  "bitflags 2.4.1",
+ "bool_to_bitflags",
  "const_format",
  "dashmap",
- "futures-util",
  "gettext",
  "indexmap",
  "itertools",
@@ -1268,9 +1279,9 @@ dependencies = [
 
 [[package]]
 name = "memchr"
-version = "2.6.4"
+version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
+checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
 name = "mime"
@@ -1586,7 +1597,7 @@ dependencies = [
 [[package]]
 name = "poise"
 version = "0.6.0-rc1"
-source = "git+https://github.com/serenity-rs/poise?branch=serenity-next#3689947a2c61c3c6f54e0ee0efb17c6ffd48297c"
+source = "git+https://github.com/GnomedDev/poise?branch=bool_to_bitflags#6309ab0248b4adf537d01c059e0cae4cb071c902"
 dependencies = [
  "async-trait",
  "derivative",
@@ -1602,7 +1613,7 @@ dependencies = [
 [[package]]
 name = "poise_macros"
 version = "0.6.0-rc1"
-source = "git+https://github.com/serenity-rs/poise?branch=serenity-next#3689947a2c61c3c6f54e0ee0efb17c6ffd48297c"
+source = "git+https://github.com/GnomedDev/poise?branch=bool_to_bitflags#6309ab0248b4adf537d01c059e0cae4cb071c902"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2168,12 +2179,13 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.0"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#8fb60db0f3ff2a44893bbe2611be9e9d595577e3"
+source = "git+https://github.com/GnomedDev/serenity?branch=bool_to_bitflags#5463f60ca4398473f2fc89219d72c4efbc90e831"
 dependencies = [
  "arrayvec",
  "async-trait",
  "base64 0.21.5",
  "bitflags 2.4.1",
+ "bool_to_bitflags",
  "bytes",
  "chrono",
  "dashmap",
@@ -2672,9 +2684,9 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.30.1"
+version = "0.30.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01e979b637815805abbdeea72e4b6d9374dd0efce6524cc65c31e14911dbc671"
+checksum = "c856f6ee1d0241d2ebaee960aaad07080afb4daf6bdfa3b250ace3cf1b81355d"
 dependencies = [
  "cfg-if",
  "core-foundation-sys",
