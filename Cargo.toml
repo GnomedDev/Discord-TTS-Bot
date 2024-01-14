@@ -74,3 +74,6 @@ git = "https://github.com/serenity-rs/songbird"
 features = ["builtin-queue"]
 branch = "serenity-next"
 version = "0.4"
+
+[patch."https://github.com/serenity-rs/serenity"]
+serenity = { git = "https://github.com/GnomedDev/serenity", branch = "fixed-v2" }
