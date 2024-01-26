@@ -67,15 +67,18 @@ version = "0.12.0"
 branch = "next"
 
 [dependencies.poise]
-git = "https://github.com/serenity-rs/poise"
+git = "https://github.com/GnomedDev/poise"
 features = ["cache"]
-branch = "serenity-next"
+branch = "arc-dispatch-on-no-builder"
 
 [dependencies.songbird]
-git = "https://github.com/GnomedDev/songbird"
+git = "https://github.com/serenity-rs/songbird"
 features = ["builtin-queue"]
-branch = "fix-id"
-version = "0.4"
+branch = "serenity-next"
 
 [patch.crates-io.small-fixed-array]
 git = "https://github.com/GnomedDev/small-fixed-array"
+
+[patch."https://github.com/serenity-rs/serenity".serenity]
+git = "https://github.com/GnomedDev/serenity"
+branch = "arc-dispatch-on-no-builder"
