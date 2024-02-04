@@ -633,7 +633,28 @@ pub async fn block(ctx: Context<'_>, user: serenity::UserId, value: bool) -> Com
         .userinfo_db
         .set_one(user.into(), "dm_blocked", &value)
         .await?;
+
     ctx.say(ctx.gettext("Done!")).await?;
+    Ok(())
+}
+
+/// Owner only: used to block a user from dms
+#[poise::command(
+    prefix_command,
+    category = "Settings",
+    owners_only,
+    hide_in_help,
+    required_bot_permissions = "SEND_MESSAGES"
+)]
+pub async fn bot_ban(ctx: Context<'_>, user: serenity::UserId, value: bool) -> CommandResult {
+    ctx.data()
+        .userinfo_db
+        .set_one(user.into(), "bot_banned", &value)
+        .await?;
+
+    let msg = format!("Set bot ban status for user {user} to `{value}`.");
+    ctx.say(msg).await?;
+
     Ok(())
 }
 
@@ -1765,6 +1786,7 @@ pub fn commands() -> [Command; 5] {
                 required_prefix(),
                 command_prefix(),
                 block(),
+                bot_ban(),
             ],
             ..set()
         },
