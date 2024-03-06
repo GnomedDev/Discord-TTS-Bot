@@ -143,15 +143,13 @@ async fn _tts(ctx: Context<'_>, author: &serenity::User, message: &str) -> Comma
             &u64::MAX.to_string(),
         );
 
-        let audio = fetch_audio(
-            &data.reqwest,
-            url,
-            data.config.tts_service_auth_key.as_deref(),
-        )
-        .await?
-        .try_unwrap()?
-        .bytes()
-        .await?;
+        let auth_key = data.config.tts_service_auth_key.as_deref();
+        let audio = fetch_audio(&data.reqwest, url, auth_key)
+            .await?
+            .try_unwrap()?
+            .bytes()
+            .await?;
+
         serenity::CreateAttachment::bytes(
             audio.to_vec(),
             format!(
