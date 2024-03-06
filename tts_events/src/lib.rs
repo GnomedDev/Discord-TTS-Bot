@@ -2,20 +2,23 @@
 #![feature(let_chains)]
 
 mod channel;
+pub mod errors;
 mod guild;
+mod interaction;
 mod member;
 mod message;
-mod other;
 mod ready;
 mod voice_state;
 
 use channel::*;
 use guild::*;
+use interaction::*;
 use member::*;
 use message::*;
-use other::*;
 use ready::*;
 use voice_state::*;
+
+use std::borrow::Cow;
 
 use poise::serenity_prelude as serenity;
 use serenity::FullEvent as Event;
@@ -53,7 +56,11 @@ pub async fn listen(framework_ctx: FrameworkContext<'_>, event: &Event) -> Resul
             interaction_create(framework_ctx, interaction).await
         }
         Event::Resume { .. } => {
-            resume(&framework_ctx.user_data());
+            framework_ctx
+                .user_data()
+                .analytics
+                .log(Cow::Borrowed("resumed"), false);
+
             Ok(())
         }
         _ => Ok(()),

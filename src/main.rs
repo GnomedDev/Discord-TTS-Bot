@@ -174,7 +174,7 @@ async fn _main(start_time: std::time::SystemTime) -> Result<()> {
         event_handler: |fw_ctx, event| Box::pin(tts_events::listen(fw_ctx, event)),
         on_error: |error| {
             Box::pin(async move {
-                let res = tts_core::errors::handle(error).await;
+                let res = tts_events::errors::handle(error).await;
                 res.unwrap_or_else(|err| tracing::error!("on_error: {:?}", err));
             })
         },

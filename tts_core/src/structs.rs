@@ -528,6 +528,7 @@ pub type Command = poise::Command<Data, CommandError>;
 pub type Context<'a> = poise::Context<'a, Data, CommandError>;
 pub type PrefixContext<'a> = poise::PrefixContext<'a, Data, CommandError>;
 pub type PartialContext<'a> = poise::PartialContext<'a, Data, CommandError>;
+pub type FrameworkError<'a> = poise::FrameworkError<'a, Data, CommandError>;
 pub type ApplicationContext<'a> = poise::ApplicationContext<'a, Data, CommandError>;
 
 pub type CommandError = Error;

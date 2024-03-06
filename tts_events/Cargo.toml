@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 libc = "0.2.152"
 
+sqlx = { workspace = true }
 poise = { workspace = true }
 tokio = { workspace = true }
 regex = { workspace = true }
