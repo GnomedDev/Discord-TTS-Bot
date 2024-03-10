@@ -219,18 +219,44 @@ pub async fn settings(ctx: Context<'_>) -> CommandResult {
     Ok(())
 }
 
-async fn voice_autocomplete<'a>(
-    ctx: ApplicationContext<'a>,
-    searching: &'a str,
-) -> Vec<serenity::AutocompleteChoice<'a>> {
+async fn user_voice_autocomplete(
+    ctx: ApplicationContext<'_>,
+    searching: &str,
+) -> Vec<serenity::AutocompleteChoice<'static>> {
     let data = ctx.data();
-    let Ok((_, mode)) = data
-        .parse_user_or_guild(ctx.interaction.user.id, ctx.interaction.guild_id)
-        .await
-    else {
+    let author_id = ctx.interaction.user.id;
+    let Some(guild_id) = ctx.interaction.guild_id else {
         return Vec::new();
     };
 
+    let Ok(voice_mode) = data.user_mode(author_id, guild_id).await else {
+        return Vec::new();
+    };
+
+    voice_autocomplete(&data, searching, voice_mode)
+}
+
+async fn server_voice_autocomplete(
+    ctx: ApplicationContext<'_>,
+    searching: &str,
+) -> Vec<serenity::AutocompleteChoice<'static>> {
+    let data = ctx.data();
+    let Some(guild_id) = ctx.interaction.guild_id else {
+        return Vec::new();
+    };
+
+    let Ok(guild_row) = data.guilds_db.get(guild_id.into()).await else {
+        return Vec::new();
+    };
+
+    voice_autocomplete(&data, searching, guild_row.voice_mode)
+}
+
+fn voice_autocomplete(
+    data: &Data,
+    searching: &str,
+    mode: TTSMode,
+) -> Vec<serenity::AutocompleteChoice<'static>> {
     let (mut i1, mut i2, mut i3, mut i4);
     let voices: &mut dyn Iterator<Item = _> = match mode {
         TTSMode::gTTS => {
@@ -378,51 +404,44 @@ where
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn change_voice<'a, T, RowT1, RowT2>(
+async fn change_voice<'a, T, RowT1>(
     ctx: &'a Context<'a>,
-    general_db: &'a database::Handler<T, RowT1>,
-    voice_db: &'a database::Handler<(T, TTSMode), RowT2>,
-    author_id: serenity::UserId,
-    guild_id: serenity::GuildId,
+    voice_db: &'a database::Handler<(T, TTSMode), RowT1>,
+    mode: TTSMode,
     key: T,
     voice: Option<FixedString>,
     target: Target,
 ) -> Result<Cow<'a, str>, Error>
 where
     RowT1: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Compact + Send + Sync + Unpin,
-    RowT2: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Compact + Send + Sync + Unpin,
 
     T: database::CacheKeyTrait + Default + Send + Sync + Copy,
     (T, TTSMode): database::CacheKeyTrait,
 {
     let data = ctx.data();
-    let (_, mode) = data.parse_user_or_guild(author_id, Some(guild_id)).await?;
-    Ok(if let Some(voice) = voice {
-        if check_valid_voice(&data, &voice, mode) {
-            general_db.create_row(key).await?;
-            voice_db
-                .set_one((key, mode), "voice", voice.as_str())
-                .await?;
-
-            let name = get_voice_name(&data, &voice, mode).unwrap_or(&voice);
-            Cow::Owned(
-                match target {
-                    Target::Guild => ctx.gettext("Changed the server voice to: {voice}"),
-                    Target::User => ctx.gettext("Changed your voice to {voice}"),
-                }
-                .replace("{voice}", name),
-            )
-        } else {
-            Cow::Borrowed(ctx.gettext("Invalid voice, do `/voices`"))
-        }
-    } else {
+    let Some(voice) = voice else {
         voice_db.delete((key, mode)).await?;
-        Cow::Borrowed(match target {
+        return Ok(Cow::Borrowed(match target {
             Target::Guild => ctx.gettext("Reset the server voice"),
             Target::User => ctx.gettext("Reset your voice"),
-        })
-    })
+        }));
+    };
+
+    if !check_valid_voice(&data, &voice, mode) {
+        return Ok(Cow::Borrowed(ctx.gettext("Invalid voice, do `/voices`")));
+    }
+
+    voice_db
+        .set_one((key, mode), "voice", voice.as_str())
+        .await?;
+
+    let name = get_voice_name(&data, &voice, mode).unwrap_or(&voice);
+    let msg = match target {
+        Target::Guild => ctx.gettext("Changed the server voice to: {voice}"),
+        Target::User => ctx.gettext("Changed your voice to {voice}"),
+    };
+
+    Ok(Cow::Owned(msg.replace("{voice}", name)))
 }
 
 fn format_languages<'a>(mut iter: impl Iterator<Item = &'a FixedString>) -> String {
@@ -827,19 +846,19 @@ pub async fn server_mode(
 pub async fn server_voice(
     ctx: Context<'_>,
     #[description = "The default voice to read messages in"]
-    #[autocomplete = "voice_autocomplete"]
+    #[autocomplete = "server_voice_autocomplete"]
     #[rest]
     voice: String,
 ) -> CommandResult {
     let data = ctx.data();
     let guild_id = ctx.guild_id().unwrap();
 
+    let guild_row = data.guilds_db.create_row(guild_id.into()).await?;
+
     let to_send = change_voice(
         &ctx,
-        &data.guilds_db,
         &data.guild_voice_db,
-        ctx.author().id,
-        guild_id,
+        guild_row.voice_mode,
         guild_id.into(),
         Some(voice.trunc_into()),
         Target::Guild,
@@ -1197,7 +1216,7 @@ pub async fn mode(
 pub async fn voice(
     ctx: Context<'_>,
     #[description = "The voice to read messages in, leave blank to reset"]
-    #[autocomplete = "voice_autocomplete"]
+    #[autocomplete = "user_voice_autocomplete"]
     #[rest]
     voice: Option<String>,
 ) -> CommandResult {
@@ -1205,12 +1224,11 @@ pub async fn voice(
     let author_id = ctx.author().id;
     let guild_id = ctx.guild_id().unwrap();
 
+    let voice_mode = data.user_mode(author_id, guild_id).await?;
     let to_send = change_voice(
         &ctx,
-        &data.userinfo_db,
         &data.user_voice_db,
-        author_id,
-        guild_id,
+        voice_mode,
         author_id.into(),
         voice.map(String::trunc_into),
         Target::User,

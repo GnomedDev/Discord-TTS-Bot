@@ -83,7 +83,7 @@ where
         create_row: &'static str,
         single_insert: &'static str,
     ) -> Result<Self> {
-        let default_row = Self::_get(&pool, CacheKey::default(), select)
+        let default_row = Self::fetch(&pool, CacheKey::default(), select)
             .await?
             .expect("Default row not in table!");
 
@@ -99,22 +99,26 @@ where
         })
     }
 
-    async fn _get(
+    async fn fetch(
         pool: &sqlx::PgPool,
         key: CacheKey,
-        select: &'static str,
+        query: &'static str,
     ) -> Result<Option<Arc<RowT::Compacted>>> {
-        let query = key.bind_query_as(sqlx::query_as(select));
+        let query = key.bind_query_as(sqlx::query_as(query));
         let row: Option<RowT> = query.fetch_optional(pool).await?;
         Ok(row.map(Compact::compact).map(Arc::new))
     }
 
-    pub async fn get(&self, identifier: CacheKey) -> Result<Arc<RowT::Compacted>> {
+    async fn cached_fetch(
+        &self,
+        identifier: CacheKey,
+        query: &'static str,
+    ) -> Result<Arc<RowT::Compacted>> {
         if let Some(row) = self.cache.get(&identifier) {
             return Ok(row.clone());
         }
 
-        let row = Self::_get(&self.pool, identifier, self.select)
+        let row = Self::fetch(&self.pool, identifier, query)
             .await?
             .unwrap_or_else(|| self.default_row.clone());
 
@@ -122,13 +126,12 @@ where
         Ok(row)
     }
 
-    pub async fn create_row(&self, identifier: CacheKey) -> Result<()> {
-        identifier
-            .bind_query(sqlx::query(self.create_row))
-            .execute(&self.pool)
-            .await?;
+    pub async fn get(&self, identifier: CacheKey) -> Result<Arc<RowT::Compacted>> {
+        self.cached_fetch(identifier, self.select).await
+    }
 
-        Ok(())
+    pub async fn create_row(&self, identifier: CacheKey) -> Result<Arc<RowT::Compacted>> {
+        self.cached_fetch(identifier, self.create_row).await
     }
 
     pub async fn set_one<Val>(
@@ -198,7 +201,8 @@ macro_rules! create_db_handler {
             const_format::formatcp!("DELETE FROM {TABLE_NAME} WHERE {ID_NAME} = $1"),
             const_format::formatcp!(
                 "INSERT INTO {TABLE_NAME}({ID_NAME}) VALUES ($1)
-                ON CONFLICT ({ID_NAME}) DO NOTHING"
+                ON CONFLICT ({ID_NAME}) DO NOTHING
+                RETURNING *"
             ),
             const_format::formatcp!(
                 "INSERT INTO {TABLE_NAME}({ID_NAME}, {{key}}) VALUES ($1, $2)
@@ -221,7 +225,8 @@ macro_rules! create_db_handler {
             ),
             const_format::formatcp!(
                 "INSERT INTO {TABLE_NAME}({ID_NAME1}, {ID_NAME2}) VALUES ($1, $2)
-                ON CONFLICT ({ID_NAME1}, {ID_NAME2}) DO NOTHING"
+                ON CONFLICT ({ID_NAME1}, {ID_NAME2}) DO NOTHING
+                RETURNING *"
             ),
             const_format::formatcp!(
                 "INSERT INTO {TABLE_NAME}({ID_NAME1}, {ID_NAME2}, {{key}}) VALUES ($1, $2, $3)

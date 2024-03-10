@@ -14,7 +14,10 @@ use typesize::derive::TypeSize;
 use poise::serenity_prelude::{self as serenity};
 use serenity::small_fixed_array::{FixedArray, FixedString};
 
-use crate::{analytics, database};
+use crate::{
+    analytics,
+    database::{self, GuildRow},
+};
 
 macro_rules! into_static_display {
     ($struct:ident) => {
@@ -281,36 +284,39 @@ impl Data {
         }
     }
 
-    pub async fn parse_user_or_guild(
+    pub async fn user_mode(
         &self,
         author_id: serenity::UserId,
         guild_id: Option<serenity::GuildId>,
-    ) -> Result<(Cow<'static, str>, TTSMode)> {
+    ) -> Result<(TTSMode, bool)> {
         let (user_row, premium_check_res) = tokio::try_join!(
             self.userinfo_db.get(author_id.into()),
             self.premium_check(guild_id)
         )?;
 
         let guild_is_premium = premium_check_res.is_none();
-        let mut guild_row = None;
-
-        let mut mode = {
-            let user_mode = if guild_is_premium {
-                user_row.premium_voice_mode
-            } else {
-                user_row.voice_mode
-            };
-
-            if let Some(mode) = user_mode {
-                mode
-            } else if let Some(guild_id) = guild_id {
-                guild_row = Some(self.guilds_db.get(guild_id.into()).await?);
-                guild_row.as_ref().unwrap().voice_mode
-            } else {
-                TTSMode::gTTS
-            }
+        let user_mode = if guild_is_premium {
+            user_row.premium_voice_mode
+        } else {
+            user_row.voice_mode
         };
 
+        if let Some(mode) = user_mode {
+            Ok((mode, false))
+        } else if let Some(guild_id) = guild_id {
+            let mode = self.guilds_db.get(guild_id.into()).await?.voice_mode;
+            Ok((mode, mode.is_premium() && !guild_is_premium))
+        } else {
+            Ok((TTSMode::gTTS, false))
+        }
+    }
+
+    pub async fn parse_user_or_guild(
+        &self,
+        author_id: serenity::UserId,
+        guild_id: Option<serenity::GuildId>,
+    ) -> Result<(Cow<'static, str>, TTSMode)> {
+        let (mode, guild_row) = self.user_mode(author_id, guild_id).await?;
         if self.config.gtts_disabled && mode == TTSMode::gTTS {
             mode = TTSMode::eSpeak;
         }
@@ -318,14 +324,7 @@ impl Data {
         if mode.is_premium() && !guild_is_premium {
             mode = TTSMode::default();
 
-            if user_row.voice_mode.is_some_and(TTSMode::is_premium) {
-                warn!(
-                    "User ID {author_id}'s normal voice mode is set to a premium mode! Resetting."
-                );
-                self.userinfo_db
-                    .set_one(author_id.into(), "voice_mode", mode)
-                    .await?;
-            } else if let Some(guild_id) = guild_id
+            if let Some(guild_id) = guild_id
                 && let Some(guild_row) = guild_row
                 && guild_row.voice_mode.is_premium()
             {
