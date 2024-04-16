@@ -90,7 +90,3 @@ branch = "serenity-next"
 git = "https://github.com/serenity-rs/songbird"
 features = ["builtin-queue"]
 branch = "serenity-next"
-
-[patch."https://github.com/serenity-rs/serenity".serenity]
-git = "https://github.com/GnomedDev/serenity"
-branch = "updated-deps"

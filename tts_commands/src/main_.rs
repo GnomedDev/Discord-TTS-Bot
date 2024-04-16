@@ -159,21 +159,33 @@ pub async fn join(ctx: Context<'_>) -> CommandResult {
     }
 
     let data = ctx.data();
-    if let Some(bot_vc) = data.songbird.get(guild_id) {
-        let bot_channel_id = bot_vc.lock().await.current_channel();
-        if let Some(bot_channel_id) = bot_channel_id {
-            if bot_channel_id.get() == author_vc.get() {
-                ctx.say(ctx.gettext("I am already in your voice channel!"))
-                    .await?;
-                return Ok(());
+    let bot_channel_id = if let Some(bot_vc) = data.songbird.get(guild_id) {
+        bot_vc.lock().await.current_channel()
+    } else {
+        None
+    };
+
+    if let Some(bot_channel_id) = bot_channel_id {
+        let bot_channel_id = serenity::ChannelId::new(bot_channel_id.get());
+        let channel_exists = {
+            let guild = require_guild!(ctx);
+            guild.channels.contains_key(&bot_channel_id)
+        };
+
+        if channel_exists {
+            let msg = if bot_channel_id == author_vc {
+                Cow::Borrowed(ctx.gettext("I am already in your voice channel!"))
+            } else {
+                ctx.gettext("I am already in <#{channel_id}>!")
+                    .replace("{channel_id}", &bot_channel_id.to_arraystring())
+                    .into()
             };
 
-            ctx.say(
-                ctx.gettext("I am already in <#{channel_id}>!")
-                    .replace("{channel_id}", &bot_channel_id.get().to_arraystring()),
-            )
-            .await?;
+            ctx.say(msg).await?;
             return Ok(());
+        } else {
+            // songbird is connected to a channel that does not exist, remove the handler.
+            data.songbird.remove(guild_id).await?;
         }
     };
 
