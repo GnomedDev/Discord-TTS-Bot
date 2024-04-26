@@ -527,6 +527,7 @@ impl std::fmt::Display for TTSServiceError {
 }
 
 pub type Command = poise::Command<Data, CommandError>;
+pub type Framework = poise::Framework<Data, CommandError>;
 pub type Context<'a> = poise::Context<'a, Data, CommandError>;
 pub type PrefixContext<'a> = poise::PrefixContext<'a, Data, CommandError>;
 pub type PartialContext<'a> = poise::PartialContext<'a, Data, CommandError>;

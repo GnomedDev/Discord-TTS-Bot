@@ -17,10 +17,12 @@ use other::*;
 use ready::*;
 use voice_state::*;
 
+use std::sync::Arc;
+
 use poise::serenity_prelude as serenity;
 use serenity::FullEvent as Event;
 
-use tts_core::structs::{FrameworkContext, Result};
+use tts_core::structs::{Framework, FrameworkContext, Result};
 
 pub fn get_intents() -> serenity::GatewayIntents {
     serenity::GatewayIntents::GUILDS
@@ -29,6 +31,18 @@ pub fn get_intents() -> serenity::GatewayIntents {
         | serenity::GatewayIntents::GUILD_VOICE_STATES
         | serenity::GatewayIntents::GUILD_MEMBERS
         | serenity::GatewayIntents::MESSAGE_CONTENT
+}
+
+pub struct EventHandler {
+    framework: Arc<Framework>,
+    shard_manager: Arc<serenity::ShardManager>,
+}
+
+#[serenity::async_trait]
+impl serenity::EventHandler for EventHandler {
+    async fn message(&self, ctx: serenity::Context, msg: serenity::Message) {
+        todo!()
+    }
 }
 
 pub async fn listen(framework_ctx: FrameworkContext<'_>, event: &Event) -> Result<()> {

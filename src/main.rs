@@ -171,7 +171,6 @@ async fn _main(start_time: std::time::SystemTime) -> Result<()> {
 
     let framework_options = poise::FrameworkOptions {
         commands: tts_commands::commands(),
-        event_handler: |fw_ctx, event| Box::pin(tts_events::listen(fw_ctx, event)),
         on_error: |error| {
             Box::pin(async move {
                 let res = tts_core::errors::handle(error).await;
@@ -195,6 +194,7 @@ async fn _main(start_time: std::time::SystemTime) -> Result<()> {
     let mut client = serenity::ClientBuilder::new_with_http(http, tts_events::get_intents())
         .voice_manager::<songbird::Songbird>(data.songbird.clone())
         .framework(poise::Framework::new(framework_options))
+        .event_handler(tts_events::EventHandler)
         .data(data as _)
         .await?;
 

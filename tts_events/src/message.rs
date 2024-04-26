@@ -1,4 +1,4 @@
-use std::{borrow::Cow, num::NonZeroU16};
+use std::{borrow::Cow, num::NonZeroU16, sync::Arc};
 
 use to_arraystring::ToArrayString;
 use tracing::info;
@@ -12,29 +12,30 @@ use tts_core::{
     errors,
     opt_ext::OptionTryUnwrap,
     require,
-    structs::{Data, FrameworkContext, JoinVCToken, Result, TTSMode},
+    structs::{Data, JoinVCToken, Result, TTSMode},
     traits::SongbirdManagerExt,
 };
 
 pub async fn message(
-    framework_ctx: FrameworkContext<'_>,
+    shard_manager: &Arc<serenity::ShardManager>,
+    ctx: serenity::Context,
     new_message: &serenity::Message,
 ) -> Result<()> {
     tokio::try_join!(
-        process_tts_msg(framework_ctx, new_message),
-        process_support_dm(framework_ctx, new_message),
-        process_mention_msg(framework_ctx, new_message),
+        process_tts_msg(shard_manager, &ctx, new_message),
+        process_support_dm(&ctx, new_message),
+        process_mention_msg(&ctx, new_message),
     )?;
 
     Ok(())
 }
 
 async fn process_tts_msg(
-    framework_ctx: FrameworkContext<'_>,
+    shard_manager: &Arc<serenity::ShardManager>,
+    ctx: &serenity::Context,
     message: &serenity::Message,
 ) -> Result<()> {
-    let data = framework_ctx.user_data();
-    let ctx = framework_ctx.serenity_context;
+    let data = ctx.data::<Data>();
 
     let guild_id = require!(message.guild_id, Ok(()));
     let (guild_row, user_row) = tokio::try_join!(
@@ -187,8 +188,8 @@ async fn process_tts_msg(
         ("Mode", Cow::Owned(mode.to_string()), true),
     ];
 
-    let shard_manager = framework_ctx.shard_manager.clone();
     let author_name = message.author.name.clone();
+    let shard_manager = shard_manager.clone();
     let icon_url = message.author.face();
 
     errors::handle_track(
@@ -202,11 +203,8 @@ async fn process_tts_msg(
     .map_err(Into::into)
 }
 
-async fn process_mention_msg(
-    framework_ctx: FrameworkContext<'_>,
-    message: &serenity::Message,
-) -> Result<()> {
-    let data = framework_ctx.user_data();
+async fn process_mention_msg(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
+    let data = ctx.data::<Data>();
     let Some(bot_mention_regex) = data.regex_cache.bot_mention.get() else {
         return Ok(());
     };
@@ -215,7 +213,6 @@ async fn process_mention_msg(
         return Ok(());
     };
 
-    let ctx = framework_ctx.serenity_context;
     let bot_user = ctx.cache.current_user().id;
     let guild_id = require!(message.guild_id, Ok(()));
     let channel = message.channel(ctx).await?.guild().unwrap();
@@ -251,13 +248,8 @@ async fn process_mention_msg(
     Ok(())
 }
 
-async fn process_support_dm(
-    framework_ctx: FrameworkContext<'_>,
-    message: &serenity::Message,
-) -> Result<()> {
-    let data = framework_ctx.user_data();
-    let ctx = framework_ctx.serenity_context;
-
+async fn process_support_dm(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
+    let data = ctx.data::<Data>();
     let channel = match message.channel(ctx).await? {
         serenity::Channel::Guild(channel) => {
             return process_support_response(ctx, message, &data, channel).await
