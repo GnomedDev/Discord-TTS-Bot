@@ -10,7 +10,7 @@ members = [
     "tts_commands",
     "tts_events",
     "tts_tasks",
-    "tts_migrations",
+    "tts_migrations", "tts_activity_adapter",
 ]
 
 [profile.release]

@@ -4,6 +4,7 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
+use ::serenity::nonmax::NonMaxU16;
 pub use anyhow::{Error, Result};
 use parking_lot::Mutex;
 use serde::Deserialize as _;
@@ -46,6 +47,7 @@ pub struct MainConfig {
     pub patreon_service: Option<reqwest::Url>,
     pub invite_channel: serenity::ChannelId,
     pub website_url: Option<reqwest::Url>,
+    pub activity_port: Option<NonMaxU16>,
     pub main_server_invite: FixedString,
     pub main_server: serenity::GuildId,
     pub ofs_role: serenity::RoleId,
