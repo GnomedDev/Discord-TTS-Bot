@@ -16,6 +16,7 @@
 
 use std::borrow::Cow;
 
+use aformat::aformat;
 use anyhow::Error;
 use num_format::{Locale, ToFormattedString};
 
@@ -48,10 +49,10 @@ pub async fn uptime(ctx: Context<'_>) -> CommandResult {
     let time_since_start = start_time.duration_since(std::time::UNIX_EPOCH)?.as_secs();
     let msg = {
         let current_user = ctx.cache().current_user().mention();
-        format!("{current_user} has been up since: <t:{time_since_start}:R>")
+        aformat!("{current_user} has been up since: <t:{time_since_start}:R>")
     };
 
-    ctx.say(msg).await?;
+    ctx.say(&*msg).await?;
     Ok(())
 }
 
