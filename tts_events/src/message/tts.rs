@@ -20,16 +20,20 @@ pub(crate) async fn process_tts_msg(
     let data = framework_ctx.user_data();
     let ctx = framework_ctx.serenity_context;
 
-    let guild_id = require!(message.guild_id, Ok(()));
+    let Some(guild_id) = message.guild_id else {
+        return Ok(());
+    };
+
     let (guild_row, user_row) = tokio::try_join!(
         data.guilds_db.get(guild_id.into()),
         data.userinfo_db.get(message.author.id.into()),
     )?;
 
-    let (mut content, to_autojoin) = require!(
-        run_checks(ctx, message, guild_id, &guild_row, &user_row).await?,
-        Ok(())
-    );
+    let Some((mut content, to_autojoin)) =
+        run_checks(ctx, message, guild_id, &guild_row, &user_row).await?
+    else {
+        return Ok(());
+    };
 
     let is_premium = data.is_premium_simple(guild_id).await?;
     let (voice, mode) = {
@@ -126,15 +130,10 @@ pub(crate) async fn process_tts_msg(
     };
 
     // Pre-fetch the audio to handle max_length errors
-    let audio = require!(
-        fetch_audio(
-            &data.reqwest,
-            url.clone(),
-            data.config.tts_service_auth_key.as_deref()
-        )
-        .await?,
-        Ok(())
-    );
+    let tts_auth_key = data.config.tts_service_auth_key.as_deref();
+    let Some(audio) = fetch_audio(&data.reqwest, url.clone(), tts_auth_key).await? else {
+        return Ok(());
+    };
 
     let hint = audio
         .headers()

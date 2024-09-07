@@ -105,12 +105,11 @@ fn required_role_embed<'a>(
     required_bot_permissions = "SEND_MESSAGES | EMBED_LINKS"
 )]
 pub async fn join(ctx: Context<'_>) -> CommandResult {
-    let author_vc = require!(ctx.author_vc(), {
-        ctx.send_error("I cannot join your voice channel unless you are in one!")
-            .await?;
-
-        Ok(())
-    });
+    let Some(author_vc) = ctx.author_vc() else {
+        let err = "I cannot join your voice channel unless you are in one!";
+        ctx.send_error(err).await?;
+        return Ok(());
+    };
 
     let Some(guild_row) = channel_check(&ctx, Some(author_vc)).await? else {
         return Ok(());

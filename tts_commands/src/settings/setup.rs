@@ -63,10 +63,9 @@ async fn show_channel_select_menu(
     guild_id: serenity::GuildId,
     bot_member: serenity::Member,
 ) -> Result<Option<(serenity::ChannelId, bool)>> {
-    let mut text_channels = require!(
-        get_eligible_channels(ctx, guild_id, bot_member).await?,
-        Ok(None)
-    );
+    let Some(mut text_channels) = get_eligible_channels(ctx, guild_id, bot_member).await? else {
+        return Ok(None);
+    };
 
     if text_channels.is_empty() {
         ctx.say("**Error**: This server doesn't have any text channels that we both have Read/Send Messages in!").await?;
