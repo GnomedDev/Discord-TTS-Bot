@@ -33,12 +33,11 @@ pub fn get_intents() -> serenity::GatewayIntents {
 }
 
 pub async fn listen(framework_ctx: FrameworkContext<'_>, event: &Event) -> Result<()> {
+    let ctx = framework_ctx.serenity_context;
     match event {
-        Event::Message { new_message } => {
-            message(framework_ctx.serenity_context, new_message).await
-        }
-        Event::GuildCreate { guild, is_new } => guild_create(framework_ctx, guild, *is_new).await,
-        Event::Ready { data_about_bot } => ready(framework_ctx, data_about_bot).await,
+        Event::Message { new_message } => message(ctx, new_message).await,
+        Event::GuildCreate { guild, is_new } => guild_create(ctx, guild, *is_new).await,
+        Event::Ready { data_about_bot } => ready(ctx, data_about_bot).await,
         Event::GuildDelete { incomplete, full } => {
             guild_delete(framework_ctx, incomplete, full.as_ref()).await
         }
